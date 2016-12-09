@@ -5,7 +5,6 @@ MAINNAME= ID
 #########################################################
 CXX= g++
 
-dummy=d
 
 CXXFLAGS= -Wall -Wvla -Werror -std=c++11 
 
