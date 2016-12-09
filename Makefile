@@ -5,6 +5,8 @@ MAINNAME= ID
 #########################################################
 CXX= g++
 
+dummy=d
+
 CXXFLAGS= -Wall -Wvla -Werror -std=c++11 
 
 CXXFLAGSDEMO= $(CXXFLAGS) -O -DNDEBUG
