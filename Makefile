@@ -1,4 +1,4 @@
-all:	euclideanDis
+all:	LearningDebug
 	
 main:
 	g++ -Wall -Wvla -Werror -g -D_GLIBCXX_DEBUG -std=c++11 main.cpp -o example
@@ -6,10 +6,10 @@ main:
 	
 	#g++ -Wall -g -std=c++11  -c test_Learning.cpp  
 	#g++ -Wall -g -std=c++11  test_Learning.o -o test-learning
-euclideanDis: euclideanDis.o	
-	g++ -Wall -g -pg -std=c++11  euclideanDis.o -o euclideanDis -larmadillo 
+LearningDebug: LearningDebug.o	
+	g++ -Wall -g -pg -std=c++11  LearningDebug.o -o LearningDebug -larmadillo 
 
-euclideanDis.o: euclideanDis.cpp Learning.hpp IDpair.hpp ID.hpp Grid.hpp
-	g++  -Wall -g -pg -std=c++11  -c  euclideanDis.cpp
+LearningDebug.o: LearningDebug.cpp  IDpair.hpp ID.hpp Grid.hpp Pair.hpp
+	g++  -Wall -g -pg -std=c++11  -c  LearningDebug.cpp
 	
 
