@@ -16,13 +16,40 @@ using namespace arma;
 
 #define EPOCH_TIMES 3
 static int prunePairsFactor = 1;
+static double thresholdValue = 1;
 
 
-std::vector<double> init(const std::vector<std::vector<double> >& examples,
-		const std::vector<std::vector<size_t> >& indecies_of_pairs,
-		const std::vector<short>& tags,
-		const std::vector<std::vector<double> >& discrete_points,
-		const double C, double& thold);
+double L1DistanceScalar(double p1, double p2){
+  return fabs(p1-p2);
+}
+
+// -1(similar) , 1(non-similar)
+short classification(const std::vector<double>& W,
+		const std::vector<Pair>& non_zero, double thold) {
+	double dotProd = 0;
+	short ans = 0;
+
+	for (size_t i = 0; i < non_zero.size(); i++)
+		dotProd += non_zero[i]._weight * W[non_zero[i]._index];
+
+	if ((dotProd - thold) < 0)
+		ans = -1;
+	else
+		ans = 1;
+
+	return ans;
+}
+
+
+
+std::vector<double> construct_Wreg(const Grid& points_pair) {
+	size_t num_of_ver = points_pair.get_num_of_vertices();
+	std::vector<double> Wreg(num_of_ver, 0);
+	for (size_t i = 0; i < num_of_ver; i++) {
+		Wreg[i] = thresholdValue;
+	}
+	return Wreg;
+}
 
 void SGD_similar(std::vector<double>& W, const std::vector<double>& Wreg,
 		const std::vector<Pair>& volume, short tag, double & thold,
@@ -68,7 +95,7 @@ std::vector<double> learn_similar(
 	size_t W_size = idpair.get_num_of_vertices();
 
 	std::vector<double> W(Wreg.size(), 0);
-	assert(Wreg.size() == W.size());
+	assert(Wreg.size() == W_size);
 
 	size_t num_of_pairs = indecies_of_pairs.size();
 
@@ -95,7 +122,7 @@ std::vector<double> learn_similar(
 	}
 
 	cout << "W.size(): " << W.size() << " \nW:" << endl;
-	for (int i = 0; i < W.size(); i++) {
+	for (size_t i = 0; i < W.size(); i++) {
 		cout << W[i] << " , ";
 		if ((i + 1) % (int) sqrt(W.size()) == 0) {
 			cout << endl;
@@ -106,11 +133,135 @@ std::vector<double> learn_similar(
 	return Wreg;
 }
 
-void sanityTest1Dim() {
+std::vector<double> init(const std::vector<std::vector<double> >& examples,
+		const std::vector<std::vector<size_t> >& indecies_of_pairs,
+		const std::vector<short>& tags,
+		const std::vector<std::vector<double> >& discrete_points,
+		const double C, double& thold) {
+	std::vector<double> Wreg;
+	std::vector<double> W;
 
+	cout << "discrete_points.size(): " << discrete_points.size() << endl;
+
+	// cout << "create grid_pair" << endl;
+	Grid grid_pair(discrete_points);
+
+	IDpair id_pair(grid_pair);
+
+	Wreg = construct_Wreg(grid_pair);
+
+	W = learn_similar(examples, id_pair, indecies_of_pairs, tags, Wreg, C,
+			thold);
+
+	return W;
+}
+
+void sanityTest1Dim() {
+	bool justFromGrid = true; //taking samples from the grid itself
+	const size_t numOfSamples = 5000;
+	std::vector<double> gridForX1 =
+			{ 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
+	//std::vector<double> gridForX1 = {0, 100};
+	std::vector<double> gridForX2 = { 0, 200 };
+	std::vector<std::vector<double> > discrete_points = { gridForX1 };
+	//std::vector<std::vector<double> > discrete_points = {{0,0},{0,200},{100,0},{100,200}};
+	std::vector<std::vector<double> > examples;
+	std::vector<std::vector<size_t> > indecies_of_pairs;
+	//arma_rng::set_seed_random();
+	if (justFromGrid) {
+		for (size_t j = 0; j < gridForX1.size(); j++) {
+			examples.push_back( { gridForX1[j] });
+		}
+		for (size_t i = 0; i < gridForX1.size(); i++) {
+			for (size_t j = 0; j < gridForX1.size(); j++) {
+				vector<size_t> p1 = { i, j };
+				indecies_of_pairs.push_back(p1);
+			}
+		}
+
+	} else {
+		// loop for creating pairs
+		for (int i = 0; i < 2; i++) {
+			vec A = randi<vec>(numOfSamples / 2, distr_param(0, 100));
+			vec B = randi<vec>(numOfSamples / 2, distr_param(0, 200));
+
+			for (size_t j = 0; j < A.size(); j++) {
+				vector<double> p1 = { A(j) };
+
+				examples.push_back(p1);
+
+				//cout<<"debug p1"<<p1<<endl;
+
+			}
+		}
+		for (size_t i = 0; i < numOfSamples / 2; i++) {
+			vector<size_t> p1 = { i, i + numOfSamples / 2 }; //0000001000,0000001000
+			indecies_of_pairs.push_back(p1);
+		}
+	}
+	vector<short> tags(indecies_of_pairs.size(), 0);
+	// generate tags.
+	int counter = 0;
+	for (size_t i = 0; i < indecies_of_pairs.size(); i++) {
+		//cout<<"debug"<<indecies_of_pairs[i][0]<<","<<indecies_of_pairs[i][1]<<endl;
+		//cout<< "examples[" << i << "]: " << examples[indecies_of_pairs[i][0]][0] << " examples[" << i << "]: " << examples[indecies_of_pairs[i][1]][0] << " ";
+		double dist = L1DistanceScalar(examples[indecies_of_pairs[i][0]][0],
+				examples[indecies_of_pairs[i][1]][0]);
+		thresholdValue = 20;
+		tags[i] = dist < thresholdValue ? -1 : 1;
+		//cout<< "tag: " << tags[i] << endl;
+		if (tags[i] < 0)
+			counter++;
+	}
+
+	//cout<<"debug tags"<<tags<<endl;
+	cout << "num of good examples: " << counter << " out of: "
+			<< numOfSamples / 2 << " examples" << endl;
+
+	double tholdArg = thresholdValue;		//argument for init, might not be changed at all in the case of threshold regularization
+
+	std::vector<std::vector<double> > gridpair(discrete_points);
+
+	time_t tstart, tend;
+	tstart = time(0);
+	size_t numOfErrors = 0;
+
+	//cout<<"debug grid"<<grid<<endl;
+	//grid.get_vertex(i,v);
+	std::vector<double> W = init(examples, indecies_of_pairs, tags, gridpair, 2,
+			tholdArg);
+
+	cout << "need imposeSymmetry(W) now!!!!!!!!";
+
+	//gridpar vector include discrete_points twice, one for each hyper-axis, i.e., X and Y
+	gridpair.insert(gridpair.end(), discrete_points.begin(),
+			discrete_points.end());
+
+	Grid grid(gridpair);
+	IDpair id_pair(grid);// is not being used as an input to SGD-init but created inside
+	// std::vector<double> Wreg = l.construct_Wreg(grid);
+
+	//cout<<"_____________debug examples1"<<examples[ indecies_of_pairs[1][0] ]<<endl;
+	for (size_t i = 0; i < indecies_of_pairs.size(); i++) {
+		vector<double> examp0 = examples[indecies_of_pairs[i][0]];
+		vector<double> examp1 = examples[indecies_of_pairs[i][1]];
+		//cout<<examp0<<endl;
+		//cout<<examp1<<endl;
+		std::vector<Pair> vol = id_pair(examp0, examp1);
+		//cout<<"debug vol"<<vol<<endl;
+		short s = classification(W, vol, tholdArg);
+		//cout<< s << " , "  << tags[i] << endl;
+		if (s != tags[i])
+			numOfErrors++;
+	}
+	tend = time(0);
+	cout << "num of errors: " << numOfErrors << endl;
+	cout << "error percent: " << (double) numOfErrors / tags.size() << endl;
+	//cout << "thold: " << thold << ".\n" << endl;
+	cout << "It took " << difftime(tend, tstart) << " second(s)." << endl;
 }
 
 int main() {
-
+	sanityTest1Dim();
 	return 0;
 }
