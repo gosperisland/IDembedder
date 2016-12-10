@@ -83,10 +83,14 @@ class IDpair : ID {
          * Getter for number of verices
          * @return number of vertices in grid
          */
-        size_t get_num_of_vertices() const {
+        size_t deprecated_get_num_of_vertices() const {
+        	//std::cout<<"get_num_of_vertices() was called, exiting"<<std::endl;
+        	//exit(1);
             return _discrete_points_for_all_dims[0].size();
         }
-        
+        size_t get_total_num_of_vertices() const {
+        	return _discrete_points_for_all_dims.get_num_of_vertices();
+        }
         /**
         * Operator () calculate a distence between two objects in space
         * @param vector_to_cmp1 first object which represents a point in space
