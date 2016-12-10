@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cstddef>
 #include <cassert>
-
+#include <iostream>
 #ifdef ID_GOOGLE_TEST
 #include "gtest/gtest.h"
 #endif
