@@ -18,6 +18,18 @@ using namespace arma;
 static int prunePairsFactor = 1;
 static double thresholdValue = 1;
 
+template <typename T> void print(ostream& os, const vector<T> arg)
+{
+	for (size_t i=0;i<arg.size(); i++){
+		cout << " " << arg[i] ;
+	}
+}
+
+template <typename T> ostream& operator<<(ostream& os, vector<T>& arg)
+{
+    print(os, arg);
+    return os;
+}
 
 double L1DistanceScalar(double p1, double p2){
   return fabs(p1-p2);
@@ -42,8 +54,10 @@ short classification(const std::vector<double>& W,
 
 
 
-std::vector<double> construct_Wreg(const Grid& points_pair) {
+std::vector<double> construct_Wreg(Grid points_pair) {
+	points_pair.double_grid();
 	size_t num_of_ver = points_pair.get_num_of_vertices();
+
 	std::vector<double> Wreg(num_of_ver, 0);
 	for (size_t i = 0; i < num_of_ver; i++) {
 		Wreg[i] = thresholdValue;
@@ -74,6 +88,7 @@ void SGD_similar(std::vector<double>& W, const std::vector<double>& Wreg,
 					W[simplex_point._index] < 0 ? 0 : W[simplex_point._index];
 		}
 		//thold -= ((1.0 / (double) etha) * (C * tag));
+
 	}
 
 	for (size_t i = 0; i < size; i++) {
@@ -92,13 +107,14 @@ std::vector<double> learn_similar(
 
 	assert(tags.size() == indecies_of_pairs.size());
 
-	size_t W_size = idpair.get_num_of_vertices();
+	size_t W_size = idpair.get_total_num_of_vertices();
 
 	std::vector<double> W(Wreg.size(), 0);
 	assert(Wreg.size() == W_size);
 
 	size_t num_of_pairs = indecies_of_pairs.size();
 
+	bool isRandomInd = true;
 	for (int j = 0; j < EPOCH_TIMES; ++j) {
 
 		std::vector<int> random_indexes(num_of_pairs);
@@ -107,9 +123,10 @@ std::vector<double> learn_similar(
 
 		for (size_t i = 0; i < num_of_pairs / prunePairsFactor; i++) {
 
+
 			//get random index
-			size_t random_index = random_indexes.back();
-			//cout<<random_index<<endl; consistant
+			size_t random_index = isRandomInd ? random_indexes.back() : i;
+
 			random_indexes.pop_back();
 
 			const std::vector<Pair>& volume = idpair(
@@ -221,6 +238,11 @@ void sanityTest1Dim() {
 	double tholdArg = thresholdValue;		//argument for init, might not be changed at all in the case of threshold regularization
 
 	std::vector<std::vector<double> > gridpair(discrete_points);
+	/*gridpair.insert(gridpair.end(), discrete_points.begin(),
+				discrete_points.end());
+*/
+
+
 
 	time_t tstart, tend;
 	tstart = time(0);
@@ -230,15 +252,15 @@ void sanityTest1Dim() {
 	//grid.get_vertex(i,v);
 	std::vector<double> W = init(examples, indecies_of_pairs, tags, gridpair, 2,
 			tholdArg);
-
-	cout << "need imposeSymmetry(W) now!!!!!!!!";
-
-	//gridpar vector include discrete_points twice, one for each hyper-axis, i.e., X and Y
-	gridpair.insert(gridpair.end(), discrete_points.begin(),
-			discrete_points.end());
-
 	Grid grid(gridpair);
 	IDpair id_pair(grid);// is not being used as an input to SGD-init but created inside
+
+
+	cout << "need imposeSymmetry(W) now!!!!!!!!"<<endl;
+
+	//gridpar vector include discrete_points twice, one for each hyper-axis, i.e., X and Y
+
+
 	// std::vector<double> Wreg = l.construct_Wreg(grid);
 
 	//cout<<"_____________debug examples1"<<examples[ indecies_of_pairs[1][0] ]<<endl;
